@@ -1,4 +1,3 @@
-
 from kivy.clock import Clock
 from kivy.lang.builder import Builder
 from kivy.metrics import dp
@@ -174,22 +173,20 @@ class ClientsTable(Screen):
         connection = connect_to_db()
         cursor = connection.cursor()
 
-        if search_text:
+        if search_text.lower() in ['f', 'm']:
             cursor.execute("""SELECT * FROM students WHERE
-                              id::TEXT LIKE %s OR
-                              name LIKE %s OR
-                              year_level::TEXT LIKE %s OR
-                              course LIKE %s OR
-                              (gender = 'M' AND %s LIKE '%%M%%') OR
-                              (gender = 'F' AND %s LIKE '%%F%%') OR
-                              gender LIKE %s""",
-                           (f"%{search_text}%", f"%{search_text}%", f"%{search_text}%", f"%{search_text}%",
-                            search_text, search_text, f"%{search_text}%"))
+                                  gender ILIKE %s""",
+                           (f"{search_text}%",))
+
         else:
-            cursor.execute("SELECT * FROM students")
+            cursor.execute("""SELECT * FROM students WHERE
+                                      id::TEXT LIKE %s OR
+                                      name LIKE %s OR
+                                      year_level LIKE %s OR
+                                      course LIKE %s""",
+                           (f"%{search_text}%", f"%{search_text}%", f"%{search_text}%", f"%{search_text}%"))
 
         results = cursor.fetchall()
-        # print(f"Results: {results}")  # Add this print statement
         cursor.close()
         connection.close()
 
@@ -203,6 +200,7 @@ class ClientsTable(Screen):
 class Add(Screen):
     def __init__(self, **kwargs):
         super(Add, self).__init__(**kwargs)
+        self.snackbar = None
         self.menu = None
         Clock.schedule_once(self.create_menu)
 
