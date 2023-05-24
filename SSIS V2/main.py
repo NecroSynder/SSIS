@@ -1,6 +1,8 @@
+
 from kivy.clock import Clock
 from kivy.lang.builder import Builder
 from kivy.metrics import dp
+from kivy.properties import BooleanProperty
 from kivy.uix.anchorlayout import AnchorLayout
 from kivy.uix.screenmanager import Screen
 from kivymd.app import MDApp
@@ -9,6 +11,7 @@ from kivymd.uix.label import MDLabel
 from kivymd.uix.menu import MDDropdownMenu
 from kivymd.uix.snackbar import MDSnackbar, MDSnackbarCloseButton
 import psycopg2
+from kivy.core.window import Window
 
 
 def connect_to_db():
@@ -27,6 +30,9 @@ class StartPage(Screen):
 
 
 class ClientsTable(Screen):
+    edit_button_disabled = BooleanProperty(True)
+    delete_button_disabled = BooleanProperty(True)
+
     def __init__(self, **kw):
         super().__init__()
         self.data_tables = None
@@ -64,14 +70,15 @@ class ClientsTable(Screen):
         self.data_tables = MDDataTable(
             pos_hint={'center_y': 0.5, 'center_x': 0.5},
             size_hint=(0.9, 0.7),
-            use_pagination=False,
+            use_pagination=True,
             check=True,
+            rows_num=10,
             column_data=[
-                ("ID.", dp(30)),
-                ("Name", dp(30)),
-                ("Year Level", dp(30)),
-                ("Courses", dp(30)),
-                ("Gender", dp(30)), ],
+                ("ID.", dp(68)),
+                ("Name", dp(68)),
+                ("Year Level", dp(68)),
+                ("Courses", dp(68)),
+                ("Gender", dp(68)), ],
             # Use sorted_results instead of results
             row_data=[(str(row[0]), row[1], str(row[2]), row[3], row[4]) for row in sorted_results], )
         self.data_tables.bind(on_check_press=self.on_check_press)
@@ -80,13 +87,25 @@ class ClientsTable(Screen):
 
     def on_enter(self):
         self.load_table()
+        self.reset_button_states()
 
     def on_check_press(self, instance_table, current_row):
         row_id = int(current_row[0])
+
         if row_id in self.selected_rows:
             self.selected_rows.remove(row_id)
         else:
-            self.selected_rows.add(row_id)
+            self.selected_rows.add(row_id)  # Remove the clear() line here
+
+        self.update_button_states()
+
+    def update_button_states(self):
+        self.edit_button_disabled = len(self.selected_rows) != 1
+        self.delete_button_disabled = len(self.selected_rows) == 0
+
+    def reset_button_states(self):
+        self.edit_button_disabled = True
+        self.delete_button_disabled = True
 
     def reset_id_sequence(self):
         connection = connect_to_db()
@@ -102,20 +121,30 @@ class ClientsTable(Screen):
         connection = connect_to_db()
         cursor = connection.cursor()
 
-        # Convert the set of selected_rows to a list
         selected_rows_list = list(self.selected_rows)
-
-        # Use a single SQL query with the IN clause to delete the selected rows
         cursor.execute("DELETE FROM students WHERE id IN %s", (tuple(selected_rows_list),))
-
         connection.commit()
         cursor.close()
         connection.close()
 
-        # Reset the id sequence
-        self.reset_id_sequence()  # Use self.reset_id_sequence() instead of reset_id_sequence()
-
+        self.reset_id_sequence()
         self.load_table()
+
+        MDSnackbar(
+            MDLabel(
+                text="Deleted",
+                theme_text_color="Custom",
+                text_color="#060000",
+            ),
+            pos_hint={"top": .98, "right": .98},
+            size_hint_x=0.18,
+            md_bg_color="#E8FFE8",
+        ).open()
+
+        self.reset_button_states()  # Add this line to reset the button states after deleting rows
+        self.selected_rows.clear()
+
+        return len(selected_rows_list) > 0
 
     def edit_selected_rows(self):
         if len(self.selected_rows) != 1:
@@ -137,7 +166,8 @@ class ClientsTable(Screen):
         edit_screen = self.manager.get_screen('Edit')
         edit_screen.row_data = row_data
         self.manager.current = 'Edit'
-        self.selected_rows.clear()  # Clear the selected_rows set after editing a row
+
+        self.selected_rows.clear()
 
     def search_data(self, search_text):
         # print(f"Searching for: {search_text}")  # Add this print statement
@@ -146,13 +176,13 @@ class ClientsTable(Screen):
 
         if search_text:
             cursor.execute("""SELECT * FROM students WHERE
-                              id::TEXT ILIKE %s OR
-                              name ILIKE %s OR
-                              year_level::TEXT ILIKE %s OR
-                              course ILIKE %s OR
-                              (gender = 'M' AND %s ILIKE '%%M%%') OR
-                              (gender = 'F' AND %s ILIKE '%%F%%') OR
-                              gender ILIKE %s""",
+                              id::TEXT LIKE %s OR
+                              name LIKE %s OR
+                              year_level::TEXT LIKE %s OR
+                              course LIKE %s OR
+                              (gender = 'M' AND %s LIKE '%%M%%') OR
+                              (gender = 'F' AND %s LIKE '%%F%%') OR
+                              gender LIKE %s""",
                            (f"%{search_text}%", f"%{search_text}%", f"%{search_text}%", f"%{search_text}%",
                             search_text, search_text, f"%{search_text}%"))
         else:
@@ -200,44 +230,72 @@ class Add(Screen):
         screen_manager = self.manager
         screen_manager.current = 'Clients-table'
 
+    def are_all_fields_filled(self):
+        text_fields = [self.ids.name, self.ids.year_level, self.ids.course, self.ids.gender]
+
+        for text_field in text_fields:
+            if not text_field.text.strip():
+                return False
+        return True
+
     def open_snackbar(self):
-        connection = connect_to_db()
-        cursor = connection.cursor()
-        cursor.execute("INSERT INTO students (name, year_level, course, gender) VALUES (%s, %s, %s, %s)",
-                       (self.ids.name.text, self.ids.year_level.text, self.ids.course.text, self.ids.gender.text))
+        if not self.are_all_fields_filled():
+            self.snackbar = MDSnackbar(
+                MDLabel(
+                    text="No Text Filled",
+                    theme_text_color="Custom",
+                    text_color="#393231",
+                ),
+                MDSnackbarCloseButton(
+                    icon="close",
+                    theme_text_color="Custom",
+                    text_color="#8E353C",
+                    _no_ripple_effect=True,
+                    on_release=self.snackbar_close,
+                ),
+                pos=(dp(24), dp(20)),
+                size_hint_x=0.2,
+                md_bg_color="#E8D8D7",
+            )
+            self.snackbar.open()
+        else:
+            connection = connect_to_db()
+            cursor = connection.cursor()
+            cursor.execute("INSERT INTO students (name, year_level, course, gender) VALUES (%s, %s, %s, %s)",
+                           (self.ids.name.text, self.ids.year_level.text, self.ids.course.text, self.ids.gender.text))
 
-        connection.commit()
-        cursor.close()
-        connection.close()
+            connection.commit()
+            cursor.close()
+            connection.close()
 
-        # Update the KivyMD datatable
-        clients_table = self.manager.get_screen('Clients-table')
-        clients_table.load_table()
+            # Update the KivyMD datatable
+            clients_table = self.manager.get_screen('Clients-table')
+            clients_table.load_table()
 
-        self.snackbar = MDSnackbar(
-            MDLabel(
-                text="Loaded",
-                theme_text_color="Custom",
-                text_color="#393231",
-            ),
-            MDSnackbarCloseButton(
-                icon="close",
-                theme_text_color="Custom",
-                text_color="#8E353C",
-                _no_ripple_effect=True,
-                on_release=self.snackbar_close,
-            ),
-            pos=(dp(24), dp(20)),
-            size_hint_x=0.3,
-            md_bg_color="#E8D8D7",
-        )
-        self.snackbar.open()
+            self.snackbar = MDSnackbar(
+                MDLabel(
+                    text="Loaded",
+                    theme_text_color="Custom",
+                    text_color="#393231",
+                ),
+                MDSnackbarCloseButton(
+                    icon="close",
+                    theme_text_color="Custom",
+                    text_color="#8E353C",
+                    _no_ripple_effect=True,
+                    on_release=self.snackbar_close,
+                ),
+                pos=(dp(24), dp(20)),
+                size_hint_x=0.2,
+                md_bg_color="#E8D8D7",
+            )
+            self.snackbar.open()
 
-        # Clear text fields
-        self.ids.name.text = ""
-        self.ids.year_level.text = ""
-        self.ids.course.text = ""
-        self.ids.gender.text = ""
+            # Clear text fields
+            self.ids.name.text = ""
+            self.ids.year_level.text = ""
+            self.ids.course.text = ""
+            self.ids.gender.text = ""
 
     def snackbar_close(self, *args):
         self.snackbar.dismiss()
@@ -306,6 +364,8 @@ class Edit(Screen):
 
 class MainWindow(MDApp):
     def build(self):
+        Window.maximize()
+        self.theme_cls.material_style = "M3"
         self.title = "SSIS v2"
         self.theme_cls.primary_palette = "Blue"
         self.theme_cls.theme_style = "Light"
