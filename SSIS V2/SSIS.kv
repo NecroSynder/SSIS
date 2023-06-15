@@ -1,0 +1,313 @@
+
+#:import get_color_from_hex kivy.utils.get_color_from_hex
+ScreenManager:
+    StartPage:
+    ClientsTable:
+    Add:
+    Edit:
+    CourseScreen:
+    AddCourseScreen:
+    EditCourseScreen:
+
+<StartPage>:
+    MDRoundFlatIconButton:
+        text: " SSIS "
+        icon: "account"
+        line_color: 0, 0, 0, 0
+        size_hint: 0.6, 0.06
+        font_size: "100sp"  # Add this line to control the text size
+        padding: "10dp", "10dp"  # Add this line to control the padding around the text and icon
+        pos_hint: {"center_x": 0.5, "center_y": 0.5}
+        on_release:
+            root.manager.current = 'Clients-table'
+
+<ClientsTable>:
+    name: 'Clients-table'
+    
+    BoxLayout:
+        spacing: dp(30)  # Adjust the spacing value as per your preference
+        padding: dp(20)
+
+        MDRaisedButton:
+            text: "COURSE"
+            size_hint: 0.2, 0.1
+            pos_hint: {"center_x": 0.2, "center_y": 0.05}
+            font_size: 25
+            elevation: 1  # Adjust the elevation value as per your preference
+            on_press:
+                root.manager.current = 'CourseScreen'
+                root.manager.transition.direction = "left"
+
+        MDRaisedButton:
+            text: "ADD"
+            size_hint: 0.2, 0.1
+            pos_hint: {"center_x": 0.2, "center_y": 0.05}
+            font_size: 25
+            elevation: 1  # Adjust the elevation value as per your preference
+            on_press:
+                root.manager.current = 'Add'
+                root.manager.transition.direction = "left"
+
+        MDRaisedButton:
+            text: "DELETE"
+            disabled: root.delete_button_disabled
+            size_hint: 0.2, 0.1
+            font_size: 25
+            pos_hint: {"center_x": 0.4, "center_y": 0.05}
+            elevation: 1  # Adjust the elevation value as per your preference
+            on_press: root.delete_selected_rows()
+
+        MDRaisedButton:
+            text: "EDIT"
+            disabled: root.edit_button_disabled
+            size_hint: 0.2, 0.1
+            font_size: 25
+            pos_hint: {"center_x": 0.1, "center_y": 0.05}
+            elevation: 1  # Adjust the elevation value as per your preference
+            on_release:
+                root.edit_selected_rows()
+                root.manager.current = 'Edit'
+                root.manager.transition.direction = "left"
+
+    MDTextField:
+        hint_text: "Search"
+        mode: "round"
+        helper_text: ""
+        pos_hint: {"top": 0.95, "right": 0.75}
+        size_hint_x: 0.5
+        icon_left: "magnify"
+        fill_color_normal: (1,1,1,1)
+        on_text: root.search_data(self.text)
+
+<Add>:
+    name: 'Add'
+
+    MDScreen:
+
+        MDBoxLayout:
+            orientation: "vertical"
+            spacing: "30dp"
+            adaptive_height: True
+            size_hint_x: .8
+            pos_hint: {"center_x": .5, "center_y": .5}
+
+            MDTextField:
+                id: name
+                hint_text: "Name"
+                helper_text: "Surname, First Name MI."
+                helper_text_color_focus: get_color_from_hex("#0085FF")
+
+            MDTextField:
+                id: year_level
+                hint_text: "Year Level"
+                helper_text: "Ex. First Year"
+                helper_text_color_focus: get_color_from_hex("#0085FF")
+
+            MDTextField:
+                id: course
+                hint_text: "Select Course"
+                on_focus: if self.focus: root.open_course_menu()
+                helper_text_color_focus: get_color_from_hex("#0085FF")
+
+            MDTextField:
+                id: gender
+                hint_text: "Gender"
+                on_focus: if self.focus: root.open_menu()
+
+            MDIconButton:
+                icon: "pencil"
+                icon_size: 50
+                pos_hint: {"center_x": .5}
+                on_press: root.open_snackbar()
+
+        MDIconButton:
+            icon: "arrow-left-bold-circle-outline"
+            pos_hint: {"top": 1, "right": 1}
+            icon_size: 50
+            on_press:
+                root.go_back()
+                root.manager.transition.direction = "right"
+
+<Edit>:
+    name: 'Edit'
+
+    MDScreen:
+
+        MDBoxLayout:
+            orientation: "vertical"
+            spacing: "30dp"
+            adaptive_height: True
+            size_hint_x: .8
+            pos_hint: {"center_x": .5, "center_y": .5}
+
+            MDTextField:
+                id: name_input
+                hint_text: "Name"
+                helper_text: "Surname, First Name MI."
+                helper_text_color_focus: get_color_from_hex("#0085FF")
+
+            MDTextField:
+                id: year_level_input
+                hint_text: "Year Level"
+                helper_text: "First Year"
+                helper_text_color_focus: get_color_from_hex("#0085FF")
+
+            MDTextField:
+                id: course_input
+                hint_text: "Select Course"
+                on_focus: if self.focus: root.open_course_menu()
+                helper_text_color_focus: get_color_from_hex("#0085FF")
+
+            MDTextField:
+                id: gender_input
+                hint_text: "Gender"
+                on_focus: if self.focus: root.open_menu()
+
+            MDIconButton:
+                id: update_button
+                icon: "pencil"
+                icon_size: 50
+                pos_hint: {"center_x": 0.5, "center_y": 0.9}
+                on_release: root.update_data()
+
+        MDIconButton:
+            icon: "arrow-left-bold-circle-outline"
+            pos_hint: {"top": 1, "right": 1}
+            icon_size: 50
+            on_press:
+                root.go_back()
+                root.manager.transition.direction = "right"
+
+
+<CourseScreen>:
+    name: 'CourseScreen'
+
+    MDScreen:
+
+        BoxLayout:
+            spacing: dp(30)  # Adjust the spacing value as per your preference
+            padding: dp(20)
+
+            MDRaisedButton:
+                text: "ADD"
+                size_hint: 0.2, 0.1
+                pos_hint: {"center_x": 0.2, "center_y": 0.05}
+                font_size: 25
+                elevation: 1  # Adjust the elevation value as per your preference
+                on_press:
+                    root.manager.current = 'AddCourseScreen'
+                    root.manager.transition.direction = "left"
+
+            MDRaisedButton:
+                id: edit_button
+                text: "EDIT"
+                size_hint: 0.2, 0.1
+                pos_hint: {"center_x": 0.2, "center_y": 0.05}
+                font_size: 25
+                elevation: 1
+                on_press: root.edit_selected_rows()
+
+            MDRaisedButton:
+                id: delete_button
+                text: "DELETE"
+                size_hint: 0.2, 0.1
+                pos_hint: {"center_x": 0.2, "center_y": 0.05}
+                font_size: 25
+                elevation: 1  # Adjust the elevation value as per your preference
+                on_press:
+                    root.delete_selected_rows()
+
+        MDIconButton:
+            icon: "arrow-left-bold-circle-outline"
+            pos_hint: {"top": 1, "right": 1}
+            icon_size: 50
+            on_press:
+                root.go_back()
+                root.manager.transition.direction = "right"
+
+<AddCourseScreen>:
+    name: 'AddCourseScreen'
+
+    MDScreen:
+
+        MDBoxLayout:
+            orientation: "vertical"
+            spacing: "30dp"
+            adaptive_height: True
+            size_hint_x: .8
+            pos_hint: {"center_x": .5, "center_y": .5}
+
+            MDTextField:
+                id: course_code_input
+                hint_text: "Course Code"
+                helper_text: "Ex. BSCS"
+                helper_text_color_focus: get_color_from_hex("#0085FF")
+
+            MDTextField:
+                id: degree_name_input
+                hint_text: "Name"
+                helper_text: "Ex. Bachelor of ..."
+                helper_text_color_focus: get_color_from_hex("#0085FF")
+
+            MDRaisedButton:
+                text: "ADD"
+                size_hint: 0.2, 0.1
+                pos_hint: {"center_x": 0.2, "center_y": 0.05}
+                font_size: 25
+                elevation: 1
+                on_press:
+                    root.add_course(course_code_input.text, degree_name_input.text)
+                    root.manager.current = 'CourseScreen'
+                    root.manager.transition.direction = "right"
+
+        MDIconButton:
+            icon: "arrow-left-bold-circle-outline"
+            pos_hint: {"top": 1, "right": 1}
+            icon_size: 50
+            on_press:
+                root.manager.current = 'CourseScreen'
+                root.manager.transition.direction = "right"
+
+<EditCourseScreen>:
+    name: 'EditCourseScreen'
+
+    MDScreen:
+        id: edit_course_screen_layout
+
+        MDBoxLayout:
+            orientation: "vertical"
+            spacing: "30dp"
+            adaptive_height: True
+            size_hint_x: .8
+            pos_hint: {"center_x": .5, "center_y": .5}
+
+            MDTextField:
+                id: course_code_input
+                hint_text: "Course Code"
+                helper_text: "Ex. BSCS"
+                helper_text_color_focus: get_color_from_hex("#0085FF")
+
+            MDTextField:
+                id: degree_name_input
+                hint_text: "Name"
+                helper_text: "Ex. Bachelor of ..."
+                helper_text_color_focus: get_color_from_hex("#0085FF")
+
+            MDRaisedButton:
+                text: "UPDATE"
+                size_hint: 0.2, 0.1
+                pos_hint: {"center_x": 0.2, "center_y": 0.05}
+                font_size: 25
+                elevation: 1
+                on_press:
+                    root.update_course()
+                    root.manager.current = 'CourseScreen'
+                    root.manager.transition.direction = "right"
+
+        MDIconButton:
+            icon: "arrow-left-bold-circle-outline"
+            pos_hint: {"top": 1, "right": 1}
+            icon_size: 50
+            on_press:
+                root.manager.current = 'CourseScreen'
+                root.manager.transition.direction = "right"
