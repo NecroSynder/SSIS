@@ -1,4 +1,3 @@
-
 #include <fstream>
 #include <iostream>
 #include <string.h>
@@ -486,9 +485,9 @@ int main() {
   while (exit == false) {
     cout << endl;
     int y;
-    cout << " 1 - Add student/Course\n 2 - Delete Student/Course\n 3 - Edit "
-            "Student/Course\n 4 - List of Students/Course\n 5 - Search student "
-            "by name,id\n 10 - Exit"
+    cout << " 1) Add student/Course\n 2) Delete Student/Course\n 3) Edit "
+            "Student/Course\n 4) List of Students/Course\n 5) Search student "
+            "by name,id\n 10) Exit"
          << endl;
     cin >> i;
 
@@ -583,6 +582,6 @@ int main() {
     }
   }
 
-  cout << "Thank you for using the Simple Student Information System!" << endl;
+  cout << "Thank you!" << endl;
   return 0;
 }
