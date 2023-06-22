@@ -1,4 +1,0 @@
-BSCS
-CSM
-COET
-CED
