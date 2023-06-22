@@ -1,289 +1,588 @@
 
-#include <cstdio>
 #include <fstream>
 #include <iostream>
-#include <map>
-#include <memory>
-#include <sstream>
-#include <string>
-#include <thread>
+#include <string.h>
+#include <vector>
 
 using namespace std;
 
-class Student {
-private:
-  string name;
-  string course;
-  int id;
+string trimfnc(string str) {
+  const char *typeOfWhitespaces = " \t\n\r\f\v";
+  str.erase(str.find_last_not_of(typeOfWhitespaces) + 1);
+  str.erase(0, str.find_first_not_of(typeOfWhitespaces));
+  return str;
+}
 
-public:
-  // Constructor
-  Student(const string &n, const string &c, int i)
-      : name(n), course(c), id(i) {}
+bool duplicate(string elementCheck,
+               int fileCheck) // checks inputs for duplicates in files
+{
+  ifstream duplicateCheck;
+  string line;
+  if (fileCheck == 1) // sets duplicate checker to the student info file
+  {
+    duplicateCheck.open("students.txt", ios::in);
+    elementCheck = " | " + elementCheck + " | ";
+  } else if (fileCheck == 2) // sets duplicate checker to the course file
+  {
+    duplicateCheck.open("courses.txt", ios::in);
+    elementCheck = elementCheck + " ";
+  } else
+    return false;
 
-  // Accessor functions (defined inline)
-  inline string getName() const { return name; }
-  inline string getCourse() const { return course; }
-  inline int getId() const { return id; }
-
-  // Mutator functions
-  inline void setName(const string &n) { name = n; }
-  inline void setCourse(const string &c) { course = c; }
-};
-
-class StudentList {
-private:
-  map<int, shared_ptr<Student>> students;
-  string fileName;
-
-public:
-  void addStudent(const shared_ptr<Student> &s) {
-    students.emplace(s->getId(), s);
+  while (getline(duplicateCheck,
+                 line)) // checks for duplicates in student IDs and courses
+  {
+    if (line.find(elementCheck) != string::npos) {
+      cout << "Already in the system, going back to menu...." << endl;
+      duplicateCheck.close();
+      return true;
+    }
   }
-  void deleteStudent(int id) { students.erase(id); }
-  void editStudent(int id, shared_ptr<Student> s) { students[id] = s; }
-  void showList(bool loadedFromFile = true) {
-    if (!loadedFromFile) {
-      cout << "\nAll Students:\n";
+
+  return false;
+}
+
+void AddCourse() {
+  ofstream courseSet;
+  string courseInput;
+  string line;
+  cout << "Add Course:";
+  cin.clear();
+  cin.ignore();
+  getline(cin, courseInput);
+  courseInput = trimfnc(courseInput);
+
+  if (courseInput.find_first_not_of(' ') ==
+      std::string::npos) // makes sure blank inputs does not get inputted into
+                         // the file
+  {
+    cout << "You cannot enter blank characters, returning to menu..." << endl;
+    return;
+  }
+
+  if (duplicate(courseInput, 2) == true)
+    return;
+
+  courseSet.open("courses.txt",
+                 ios::app); // input written into course file
+  if (courseSet.is_open()) {
+    courseSet << courseInput << " "
+              << endl; // space is added to serve as detector for find function
+                       // to find exact word.
+    courseSet.close();
+  }
+  cout << "Course Added!" << endl;
+}
+
+string courseSelect() {
+  int count = 0;
+  ifstream course;
+  string courseSelected = "none";
+  string line;
+  course.open("courses.txt", ios::in);
+  if (course.is_open() == true) {
+    while (getline(course, line)) // makes list with corresponding number for
+                                  // user to select course with
+    {
+      cout << count + 1 << " " << line << endl;
+      count++;
+    }
+
+    vector<string> courseList;
+    count = 0;
+
+    course.clear();
+    course.seekg(0);
+
+    while (getline(
+        course, line)) // put courses stored in course file to vector for easy
+                       // access when writing available courses to student file
+    {
+      courseList.push_back(line);
+    }
+
+    if (courseList.empty() == true) {
+      cout << "No courses added yet, please add a course." << endl;
+      return courseSelected;
+    }
+
+    int length = courseList.size();
+
+    do // allows user to select course to add to student file from a list of
+       // courses in course file
+    {
+      cout << "Select Course You Would Like To Add (input number from the left "
+              "of the chosen course):\n";
+      cin >> count;
+
+      if (count < 1 || count > length) {
+        cout << "Number does not correspond to listed courses. Try again: ";
+        cin.clear();
+        cin.ignore(10000, '\n');
+      }
+
+    } while (count < 1 || count > length);
+
+    courseSelected = courseList[count - 1];
+    cout << "Course Selected: " << courseSelected;
+    course.close();
+  } else {
+    cout << "No courses added yet, please add a course." << endl;
+  }
+
+  cout << endl;
+  return courseSelected;
+}
+
+void AddStudent() {
+  ofstream studentSet;
+  string getName;
+  string getId;
+  string getCourse;
+  string line;
+
+  cout << "Enter Name: ";
+  cin.clear();
+  cin.ignore();
+  getline(cin, getName);
+  getName = trimfnc(getName);
+  cout << "Enter your ID: ";
+  getline(cin, getId);
+  getId = trimfnc(getId);
+
+  if (getName.find_first_not_of(' ') ==
+      std::string::npos) // makes sure no blank characters are inputted
+  {
+    cout << "You cannot enter blank characters, returning to menu...";
+    return;
+  }
+
+  if (getId.find_first_not_of(' ') == std::string::npos) {
+    cout << "You cannot enter blank characters, returning to menu...";
+    return;
+  }
+
+  getCourse = courseSelect();
+
+  if (getCourse ==
+      "none") // cannot add student if there are no courses available
+    return;
+
+  if (duplicate(getId, 1) == true) // checks for duplicate IDs
+    return;
+
+  studentSet.open("students.txt", ios::app);
+  if (studentSet.is_open() == true) {
+    studentSet << getName << " | ";
+    studentSet << getId << " | ";
+    studentSet << getCourse << " " << endl;
+    studentSet.close();
+  }
+
+  cout << "Student Added!" << endl;
+}
+
+void listFiles(int choice) // lists files
+{
+  ifstream listName;
+  string line;
+
+  if (choice == 1)
+    listName.open("students.txt", ios::in);
+  else if (choice == 2)
+    listName.open("courses.txt", ios::in);
+  else
+    return;
+
+  if (listName.is_open() == true) {
+    while (getline(listName, line)) {
+      cout << line << endl;
+    }
+
+    listName.close();
+  }
+}
+
+void deleteStudent() {
+  listFiles(1);
+  ifstream studentOrig("students.txt");
+  ofstream studentNew("temp.txt");
+  string line;
+  string idToDelete;
+  bool found = false;
+  cin.clear();
+  cin.ignore();
+  cout << "Enter ID of student to delete: ";
+  getline(cin, idToDelete);
+  idToDelete = trimfnc(idToDelete);
+
+  while (getline(studentOrig, line)) {
+    if (line.find(" | " + idToDelete + " | ") ==
+        string::npos) // transfer line from orig file to new file if string is
+                      // not found
+    {
+      studentNew << line << endl;
     } else {
-      cout << "\nLoaded Students:\n";
-    }
-    for (auto const &[id, student] : students) {
-      cout << "Name: " << student->getName()
-           << " | Course: " << student->getCourse() << " | ID: " << id << endl;
+      found = true;
     }
   }
 
-  shared_ptr<Student> searchByName(const string &name) {
-    for (auto const &[id, student] : students) {
-      if (student->getName() == name) {
-        return student;
-      }
-    }
-    throw runtime_error("Student not found.");
-  }
-  shared_ptr<Student> searchByCourse(const string &course) {
-    for (auto const &[id, student] : students) {
-      if (student->getCourse() == course) {
-        return student;
-      }
-    }
-    throw runtime_error("Student not found.");
-  }
-  shared_ptr<Student> searchById(int id) {
-    auto it = students.find(id);
-    if (it == students.end()) {
-      throw runtime_error("Student not found.");
-    }
-    return it->second;
+  if (!found) {
+    cout << "Student not found." << endl;
+  } else {
+    cout << "Student deleted." << endl;
   }
 
-  void loadFromFile() {
-    cout << "Enter file name: ";
-    cin >> fileName;
-    ifstream fin(fileName);
-    ifstream courseFile("courses.txt");
-    if (fin.is_open() && courseFile.is_open()) {
-      // int id;
-      string name, course;
-      string line;
-      while (getline(fin, line)) {
-        stringstream ss(line);
-        int id;
-        string name;
-        if (ss >> id && getline(ss.ignore(), name, ',')) {
-          string course;
-          if (getline(courseFile, course)) {
-            // remove newline character at the end of the course string
-            if (!course.empty() && course.back() == '\r') {
-              course = course.substr(0, course.size() - 1);
-            }
-            auto s = make_shared<Student>(name, course, id);
-            addStudent(s);
-          }
-        }
-      }
-      fin.close();
-      courseFile.close();
-      cout << "Data loaded from files.\n";
+  studentOrig.close();
+  studentNew.close();
+  remove("students.txt");
+  rename("temp.txt", "students.txt");
+}
+
+void deleteCourse() {
+  listFiles(2);
+  ifstream courseOrig("courses.txt");
+  ifstream studentOrig("students.txt");
+  ofstream courseNew("temp.txt");
+  ofstream studentNew("temp2.txt");
+  string line;
+  string courseToDel;
+  bool found = false;
+
+  cout << "Enter course to delete: ";
+  cin.clear();
+  cin.ignore();
+  getline(cin, courseToDel);
+  courseToDel = trimfnc(courseToDel);
+  if (courseToDel.empty()) {
+    cout << "No course chosen" << endl;
+    return;
+  }
+
+  while (getline(
+      courseOrig,
+      line)) // checks if course inputted by user is stored in course file
+  {
+    if (line.find(courseToDel + " ") == string::npos) {
+      courseNew << line << endl;
     } else {
-      cout << "Files not found, starting with an empty list.\n";
+      found = true;
     }
   }
 
-  void saveToFile() {
-    if (fileName.empty()) { // Only ask for the file name if it's not already set
-      cout << "Enter file name: ";
-      cin >> fileName;
-    }
-    ofstream studentFile(fileName);
-    ofstream courseFile("courses.txt");
-    if (studentFile.is_open() && courseFile.is_open()) {
-      for (auto const &[id, student] : students) {
-        studentFile << student->getId() << "," << student->getName() << endl;
-        courseFile << student->getCourse() << endl;
+  if (!found) {
+    cout << "Course not found." << endl;
+  } else {
+
+    while (getline(studentOrig, line)) // transfer line where metioned course is
+                                       // not found to new student file
+    {
+      if (line.find(courseToDel + " ") == string::npos) {
+        studentNew << line << endl;
       }
-      studentFile.close();
-      courseFile.close();
-      cout << "Data saved to files.\n";
+    }
+
+    cout << "Course and students associated with the course deleted." << endl;
+  }
+
+  courseOrig.close();
+  courseNew.close();
+  studentNew.close();
+  studentOrig.close();
+  remove("courses.txt"); // sets new (temp) files to same name as
+                         // previous files
+  rename("temp.txt", "courses.txt");
+  remove("students.txt");
+  rename("temp2.txt", "students.txt");
+}
+
+void editCourse() {
+  listFiles(2);
+  ifstream courseOrig("courses.txt");
+  ifstream studentOrig("students.txt");
+  ofstream courseNew("temp.txt");
+  ofstream studentNew("temp2.txt");
+  string line;
+  string courseToEdit;
+  string newCourseName;
+  bool found = false;
+
+  cout << "Enter course to edit: ";
+  cin.clear();
+  cin.ignore();
+  getline(cin, courseToEdit);
+  courseToEdit = trimfnc(courseToEdit);
+
+  while (getline(courseOrig,
+                 line)) // checks orig course file for course to be edited
+  {
+    if (line == courseToEdit + " ") {
+      found = true;
+      cout << "Enter new course name: ";
+      getline(cin, newCourseName);
+      newCourseName = trimfnc(newCourseName);
+
+      if (duplicate(newCourseName, 2) == true) {
+        courseOrig.close();
+        courseNew.close();
+        studentNew.close();
+        studentOrig.close();
+        remove("temp.txt");
+        remove("temp2.txt");
+        return;
+      }
+      courseNew << newCourseName << " " << endl;
     } else {
-      cout << "Unable to save data to files.\n";
+      courseNew << line << endl;
     }
   }
-};
+
+  if (!found) {
+    cout << "Course not found." << endl;
+  } else {
+    cout << "Course edited." << endl;
+  }
+
+  if (found ==
+      true) // updates student file to show the edited course name properly
+  {
+    while (getline(studentOrig, line)) {
+      if (line.find(" | " + courseToEdit + " ") == string::npos) {
+        studentNew << line << endl;
+      } else {
+        line.replace(line.find(courseToEdit), line.length(),
+                     newCourseName + " ");
+        studentNew << line << endl;
+      }
+    }
+  }
+
+  courseOrig.close();
+  courseNew.close();
+  studentNew.close();
+  studentOrig.close();
+  remove("courses.txt");
+  rename("temp.txt", "courses.txt");
+  remove("students.txt");
+  rename("temp2.txt", "students.txt");
+}
+
+void editStudent() {
+  listFiles(1);
+  fstream student;
+  ifstream studentOrig("students.txt");
+  ofstream studentNew("temp.txt");
+  string line;
+  string idToEdit;
+  string newName;
+  string newId;
+  bool found = false;
+
+  cin.clear();
+  cin.ignore();
+  cout << "Enter ID of student to edit: ";
+  getline(cin, idToEdit);
+  idToEdit = trimfnc(idToEdit);
+
+  while (getline(
+      studentOrig,
+      line)) // checks student ID in file to edit student information if present
+  {
+    if (line.find(" | " + idToEdit + " | ") == string::npos) {
+      studentNew << line << endl;
+    } else // edit student information when found
+    {
+      found = true;
+      cout << "Enter new name: ";
+      getline(cin, newName);
+      newName = trimfnc(newName);
+      cout << "Enter new ID: ";
+      getline(cin, newId);
+      newId = trimfnc(newId);
+
+      if (newName.find_first_not_of(' ') ==
+          std::string::npos) // does not allow user to input only blank
+                             // characters
+      {
+        cout << "You cannot enter blank characters, returning to menu...";
+        studentOrig.close();
+        studentNew.close();
+        remove("temp.txt");
+        return;
+      }
+
+      if (newId.find_first_not_of(' ') == std::string::npos) {
+        cout << "You cannot enter blank characters, returning to menu...";
+        studentOrig.close();
+        studentNew.close();
+        remove("temp.txt");
+        return;
+      }
+
+      if (duplicate(newId, 1) == true) {
+        studentOrig.close();
+        studentNew.close();
+        remove("temp.txt");
+        return;
+      }
+
+      studentNew << newName << " | " << newId << " | " << courseSelect() << " "
+                 << endl;
+    }
+  }
+
+  if (!found) {
+    cout << "Student not found." << endl;
+  } else {
+    cout << "Student edited." << endl;
+  }
+
+  studentOrig.close();
+  studentNew.close();
+  remove("students.txt");
+  rename("temp.txt", "students.txt");
+}
+
+void searchStudent() {
+  ifstream studentList;
+  string line;
+  string searchName, searchId;
+  bool found = false;
+
+  cout << "Enter student name to search: ";
+  cin.clear();
+  cin.ignore();
+  getline(cin, searchName);
+  searchName = trimfnc(searchName);
+
+  cout << "Enter student ID to search: ";
+  getline(cin, searchId);
+  searchId = trimfnc(searchId);
+
+  studentList.open("students.txt", ios::in);
+
+  if (studentList.is_open() == true) {
+    cout << "NAME | ID NUMBER | COURSE" << endl;
+    while (getline(studentList, line)) // find student with the associated name
+                                       // and ID and show all information
+    {
+      if (line.find(searchName + " | " + searchId) != string::npos) {
+        cout << line << endl;
+        found = true;
+      }
+    }
+    if (!found) {
+      cout << "Student not found." << endl;
+    }
+  } else {
+    cout << "Unable to open students.txt file." << endl;
+  }
+}
 
 int main() {
-  StudentList list;
-  int choice;
-  int Choice;
-  cout << "Disclaimer:" << endl;
-  cout << "\tWhen loading a file, you must input the filename with the file "
-          "extension and only txt files."
-       << endl;
-  cout << "\tExample: trial.txt" << endl;
-  std::this_thread::sleep_for(std::chrono::seconds(1));
-  cout << "\nDo you have a File to load? (1: Yes, 2: No): ";
-  cin >> Choice;
-  if (Choice == 1) {
-    list.loadFromFile();
-    list.showList(true); // display the loaded students
-  }
-  cout << "\nChoose an option from 1 to 10." << endl;
-  do {
-    cout << "1. Add student\n";
-    cout << "2. Delete student\n";
-    cout << "3. Edit Student Name or Course\n";
-    cout << "4. Show list\n";
-    cout << "5. Search by name\n";
-    cout << "6. Search by course\n";
-    cout << "7. Search by ID\n";
-    cout << "8. Load from File\n";
-    cout << "9. Save to file\n";
-    cout << "10. Exit\n";
-    cout << "Enter your choice: ";
-    cin >> choice;
-    switch (choice) {
-    case 1: {
-      string name, course;
-      int id;
-      cout << "Enter student name: ";
-      cin.ignore();
-      getline(cin, name);
-      cout << "Enter course name: ";
-      cin >> course;
-      cout << "Enter ID: ";
-      cin >> id;
-      shared_ptr<Student> s = make_shared<Student>(name, course, id);
-      list.addStudent(s);
-      cout << "Student added.\n";
+  int i;
+  bool exit = false;
+  cout << "\nSimple Student Information System!" << endl;
+  while (exit == false) {
+    cout << endl;
+    int y;
+    cout << " 1 - Add student/Course\n 2 - Delete Student/Course\n 3 - Edit "
+            "Student/Course\n 4 - List of Students/Course\n 5 - Search student "
+            "by name,id\n 10 - Exit"
+         << endl;
+    cin >> i;
+
+    switch (i) // options for user to select from
+    {
+
+    case 1:
+      do {
+        cin.clear();
+        cin.ignore();
+        cout << "input 1 to add a student or 2 to add a course:";
+        cin >> y;
+        cout << endl;
+        if (y == 2)
+          AddCourse();
+
+        if (y == 1)
+          AddStudent();
+
+      } while (y != 1 && y != 2);
+
       break;
-    }
-    case 2: {
-      int id;
-      cout << "Enter student ID to delete: ";
-      cin >> id;
-      list.deleteStudent(id);
-      cout << "Student deleted.\n";
+
+    case 2:
+      do {
+        cin.clear();
+        cin.ignore();
+        cout << "input 1 to delete a student or 2 to delete a course:";
+        cin >> y;
+        cout << endl;
+
+        if (y == 1)
+          deleteStudent();
+
+        if (y == 2)
+          deleteCourse();
+      } while (y != 1 && y != 2);
       break;
-    }
-    case 3: {
-      int id;
-      cout << "Enter student ID to edit: ";
-      cin >> id;
-      shared_ptr<Student> s = list.searchById(id);
-      if (s != nullptr) {
-        cout << "What do you want to edit?" << endl;
-        cout << "1. Name" << endl;
-        cout << "2. Course" << endl;
-        int editOption;
-        cin >> editOption;
-        if (editOption == 1) {
-          string name;
-          cout << "Enter new name: ";
-          cin.ignore();
-          getline(cin, name);
-          s->setName(name);
-        } else if (editOption == 2) {
-          string course;
-          cout << "Enter new course: ";
-          cin.ignore();
-          getline(cin, course);
-          s->setCourse(course);
-        } else {
-          cout << "Invalid option. Student not edited.\n";
-          break;
-        }
-        list.editStudent(id, s);
-        cout << "Student edited.\n";
-      } else {
-        cout << "Student not found.\n";
-      }
+
+    case 3:
+      do {
+        cin.clear();
+        cin.ignore();
+        cout << "input 1 to edit students or 2 to edit course:";
+        cin >> y;
+        cout << endl;
+
+        if (y == 1)
+          editStudent();
+
+        if (y == 2)
+          editCourse();
+
+      } while (y != 1 && y != 2);
       break;
-    }
 
     case 4:
-      list.showList(); // display all students
+      do {
+
+        cin.clear();
+        cin.ignore();
+        cout << "input 1 to list students or 2 to list course:";
+        cin >> y;
+
+        if (y == 1) {
+          cout << endl;
+          cout << "Listing Students..." << endl;
+          cout << endl;
+          cout << "NAME | ID NUMBER | COURSE" << endl;
+          cout << endl;
+          listFiles(1);
+        }
+
+        if (y == 2) {
+          cout << "Listing Courses..." << endl;
+          listFiles(2);
+        }
+
+      } while (y != 2 && y != 1);
       break;
-    case 5: {
-      string name;
-      cout << "Enter student name to search: ";
-      cin.ignore();
-      getline(cin, name);
-      shared_ptr<Student> s = list.searchByName(name);
-      if (s != nullptr) {
-        cout << "Name: " << s->getName() << " | Course: " << s->getCourse()
-             << " | ID: " << s->getId() << endl;
-      } else {
-        cout << "Student not found.\n";
-      }
+
+    case 5:
+      searchStudent();
       break;
-    }
-    case 6: {
-      string course;
-      cout << "Enter course to search: ";
-      cin >> course;
-      shared_ptr<Student> s = list.searchByCourse(course);
-      if (s != nullptr) {
-        cout << "Name: " << s->getName() << " | Course: " << s->getCourse()
-             << " | ID: " << s->getId() << endl;
-      } else {
-        cout << "Student not found.\n";
-      }
-      break;
-    }
-    case 7: {
-      int id;
-      cout << "Enter ID to search: ";
-      cin >> id;
-      shared_ptr<Student> s = list.searchById(id);
-      if (s != nullptr) {
-        cout << "Name: " << s->getName() << " | Course: " << s->getCourse()
-             << " | ID: " << s->getId() << endl;
-      } else {
-        cout << "Student not found.\n";
-      }
-      break;
-    }
-    case 8: {
-      list.loadFromFile();
-      break;
-    }
-    case 9: {
-      list.saveToFile();
-      break;
-    }
+
     case 10:
-      int saveChoice;
-      cout << "Do you want to save the data to file again before exiting? (1: "
-              "Yes, "
-              "2: No): ";
-      cin >> saveChoice;
-      if (saveChoice == 1) {
-        list.saveToFile();
-      }
-      cout << "Goodbye!\n";
-      exit(0);
+      exit = true;
+      break;
+
+    default:
+      cout << "Option not Found!" << endl;
     }
-  } while (choice != 10);
+  }
+
+  cout << "Thank you for using the Simple Student Information System!" << endl;
   return 0;
 }
